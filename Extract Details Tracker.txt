@@ -1,0 +1,99 @@
+Sub ExtractColumnsFromExternalWorkbook()
+    Dim wbSource As Workbook
+    Dim wsSource As Worksheet
+    Dim wsDestination As Worksheet
+    Dim lastRow As Long
+    Dim i As Long, j As Long
+    Dim headersArr As Variant
+    Dim colIndex As Long
+    Dim destinationRowIndex As Long
+    Dim filePath As String
+    Dim ws As Worksheet
+    Dim wsExists As Boolean
+    
+    ' Define the file path
+    filePath = "C:\Users\Admin\OneDrive - nividit.com\Final Master Report\Nivid Master Report 2024.xlsx"
+    
+    ' Open the source workbook
+    Set wbSource = Workbooks.Open(filePath)
+    
+    ' Set source worksheet
+    Set wsSource = wbSource.Sheets("Active Submissions")
+    
+    ' Check if the destination worksheet already exists
+    wsExists = False
+    For Each ws In ThisWorkbook.Sheets
+        If ws.Name = "Extracted Data" Then
+            wsExists = True
+            Exit For
+        End If
+    Next ws
+    
+    ' Delete the existing worksheet if it exists
+    If wsExists Then
+        Application.DisplayAlerts = False
+        ThisWorkbook.Sheets("Extracted Data").Delete
+        Application.DisplayAlerts = True
+    End If
+    
+    ' Create a new worksheet for the extracted data
+    Set wsDestination = ThisWorkbook.Sheets.Add(After:=ThisWorkbook.Sheets(ThisWorkbook.Sheets.Count))
+    wsDestination.Name = "Extracted Data"
+    
+    ' Array of headers to extract
+    headersArr = Array("Date submitted", "Account Name", "Resource Name", "Skill", "Resource Mail ID", "Status")
+    
+    ' Write headers to the destination worksheet
+    For j = LBound(headersArr) To UBound(headersArr)
+        wsDestination.Cells(1, j + 1).Value = headersArr(j)
+    Next j
+    
+    ' Apply formatting to the first row (headers)
+    With wsDestination.Rows(1)
+        .Font.Bold = True
+        .Interior.Color = RGB(255, 255, 0) ' Yellow
+    End With
+    
+    ' Find the last row of data in the source worksheet
+    lastRow = wsSource.Cells(wsSource.Rows.Count, "A").End(xlUp).Row
+    
+    ' Loop through each column in the source worksheet
+    For i = 1 To wsSource.Cells(1, wsSource.Columns.Count).End(xlToLeft).Column
+        ' Check if the header matches any of the headers to extract
+        For j = LBound(headersArr) To UBound(headersArr)
+            If StrComp(wsSource.Cells(1, i).Value, headersArr(j), vbTextCompare) = 0 Then
+                colIndex = i
+                Exit For
+            End If
+        Next j
+        
+        ' If the column matches one of the headers, extract the data
+        If colIndex > 0 Then
+            ' Loop through each row in the column
+            For destinationRowIndex = 2 To lastRow
+                ' Write data to the destination worksheet
+                wsDestination.Cells(destinationRowIndex, j + 1).Value = wsSource.Cells(destinationRowIndex, colIndex).Value
+            Next destinationRowIndex
+            ' Align data to center
+            wsDestination.Columns(j + 1).HorizontalAlignment = xlCenter
+            
+            ' Add filter to Account Name column
+            If headersArr(j) = "Account Name" Then
+                wsDestination.Range(wsDestination.Cells(1, j + 1), wsDestination.Cells(lastRow, j + 1)).AutoFilter
+            End If
+        End If
+        
+        ' Reset colIndex for next iteration
+        colIndex = 0
+    Next i
+    ' Apply borders to all cells
+    With wsDestination.UsedRange
+        .Borders.LineStyle = xlContinuous
+        .Borders.Weight = xlThin
+    End With
+    
+    MsgBox "Data extraction complete.", vbInformation
+End Sub
+
+
+
